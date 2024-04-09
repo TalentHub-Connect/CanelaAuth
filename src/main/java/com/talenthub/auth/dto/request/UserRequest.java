@@ -11,8 +11,8 @@ import java.math.BigInteger;
 @Builder
 public class UserRequest {
     private Integer id;
-    private String nombres;
-    private String correo;
+    private String name;
+    private String email;
     private String password;
     private String username;
 }

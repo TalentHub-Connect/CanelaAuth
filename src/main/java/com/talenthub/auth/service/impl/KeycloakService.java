@@ -3,15 +3,18 @@ package com.talenthub.auth.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.talenthub.auth.dto.request.AuthenticationRequest;
+import com.talenthub.auth.dto.request.UserRequest;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
 import com.talenthub.auth.security.KeycloakSecurityUtil;
 import com.talenthub.auth.service.intf.IKeycloakService;
 import com.talenthub.auth.tool.ObjectToUrlEncodedConverter;
+import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.Keycloak;
 
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 
 import org.keycloak.representations.idm.UserRepresentation;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -31,6 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static java.util.Collections.singletonList;
 
 
 /**
@@ -120,6 +126,60 @@ public class KeycloakService implements IKeycloakService {
         }
         return null;
     }
+
+    /**
+     * Método para crear un usuario con un rol específico en Keycloak.
+     * @param user Usuario a crear.
+     * @param role Rol del usuario
+     * @return ResponseEntity con el usuario creado.
+     */
+
+    @Override
+    public ResponseEntity<?> createUserWithRole(@RequestBody UserRequest user, String role) {
+        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        UserRepresentation userRep = mapUserRep(user);
+        Response res = keycloak.realm(realm).users().create(userRep);
+
+        if (res.getStatusInfo().getFamily() == Response.Status.Family.SUCCESSFUL) {
+            UserRepresentation userRepresentation = keycloak.realm(realm).users().search(user.getUsername()).get(0);
+            emailVerification(userRepresentation.getId());
+            keycloak.realm(realm).users().get(userRepresentation.getId()).resetPassword(mapUserRep(user).getCredentials().get(0));
+            String userId = keycloak.realm(realm).users().search(user.getUsername()).get(0).getId();
+            RoleRepresentation Role = keycloak.realm(realm).roles().get(role).toRepresentation();
+            keycloak.realm(realm).users().get(userId).roles().realmLevel().add(singletonList(Role));
+            return ResponseEntity.status(HttpStatus.CREATED).body(user);
+        } else {
+            String errorMessage = res.readEntity(String.class);
+            return ResponseEntity.badRequest().body(errorMessage);
+        }
+    }
+
+    @Override
+    public void emailVerification(String userId) {
+        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        keycloak.realm(realm).users().get(userId).executeActionsEmail(singletonList("VERIFY_EMAIL"));
+    }
+
+    @Override
+    public UserRepresentation mapUserRep(UserRequest user) {
+        UserRepresentation userRep = new UserRepresentation();
+        userRep.setUsername(user.getUsername());
+        userRep.setFirstName(user.getName());
+        userRep.setEmail(user.getEmail());
+        userRep.setEnabled(true);
+        userRep.setEmailVerified(false);
+        userRep.setRequiredActions(singletonList("VERIFY_EMAIL"));
+        userRep.setRequiredActions(singletonList("UPDATE_PASSWORD"));
+        List<CredentialRepresentation> creds = new ArrayList<>();
+        CredentialRepresentation cred = new CredentialRepresentation();
+        cred.setType(CredentialRepresentation.PASSWORD);
+        cred.setValue(user.getPassword());
+        cred.setTemporary(true);
+        creds.add(cred);
+        userRep.setCredentials(creds);
+        return userRep;
+    }
+
 
     @Override
     public ResponseEntity<?> forgotPassword(String username){

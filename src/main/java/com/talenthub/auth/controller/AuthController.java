@@ -1,6 +1,7 @@
 package com.talenthub.auth.controller;
 
 import com.talenthub.auth.dto.request.AuthenticationRequest;
+import com.talenthub.auth.dto.request.UserRequest;
 import com.talenthub.auth.dto.response.MessageResponse;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.ws.rs.QueryParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +41,18 @@ public class AuthController {
     public ResponseEntity<?> getAccessToken(@RequestBody AuthenticationRequest request) throws ErrorKeycloakServiceException {
         TokenResponse token = keycloakService.getAccessToken(request);
         return new ResponseEntity<>(token, HttpStatus.OK);
+    }
+    @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con rol ADMIN")
+    @ApiResponse(responseCode = "201", description = "Admin creado")
+    @ApiResponse(responseCode = "400", description = "Error al crear el admin")
+    @PostMapping("/{role}")
+    public ResponseEntity<?> createAdmin(@RequestBody UserRequest userRequest, @PathVariable String role ){
+        ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role);
+        if (response.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body("Admin creado");
+        } else {
+            return ResponseEntity.badRequest().body("Error creating admin");
+        }
     }
     /**
      * Este metodo permite restaurar la contraseña de un usuario
