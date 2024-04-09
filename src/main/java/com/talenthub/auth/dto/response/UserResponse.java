@@ -13,10 +13,5 @@ import java.util.Set;
 public class UserResponse {
     private String nombres;
     private String correo;
-    private BigInteger telefono;
-    private BigInteger identificacion;
     private String username;
-    private String tipoDocumento;
-    private Set<String> especialidades;
-    private Integer firmaId;
 }

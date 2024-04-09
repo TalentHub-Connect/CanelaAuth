@@ -10,8 +10,11 @@ import com.talenthub.auth.service.intf.IKeycloakService;
 import com.talenthub.auth.tool.ObjectToUrlEncodedConverter;
 import org.keycloak.admin.client.Keycloak;
 
+import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.RoleRepresentation;
 
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -24,8 +27,10 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 
 /**
@@ -105,6 +110,7 @@ public class KeycloakService implements IKeycloakService {
             throw new ErrorKeycloakServiceException(e.getMessage(), e.getStatusCode().value());
         }
     }
+
     public String getRole(String username) {
         Keycloak keycloak = keycloakUtil.getKeycloakInstance();
         String userId = keycloak.realm(realm).users().search(username).get(0).getId();
@@ -114,4 +120,42 @@ public class KeycloakService implements IKeycloakService {
         }
         return null;
     }
+
+    @Override
+    public ResponseEntity<?> forgotPassword(String username){
+        UsersResource usersResource = keycloakUtil.getKeycloakInstance().realm(realm).users();
+
+        List<UserRepresentation> userRepresentations = usersResource.search(username);
+        Optional<UserRepresentation> userOptional = userRepresentations.stream().findFirst();
+
+        if (userOptional.isPresent()) {
+            UserRepresentation userRepresentation = userOptional.get();
+            UserResource userResource = usersResource.get(userRepresentation.getId());
+            List<String> actions = new ArrayList<>();
+            actions.add("UPDATE_PASSWORD");
+            userResource.executeActionsEmail(actions);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    /**
+     * Método para desabilitar una cuenta de usuario en Keycloak.
+     * @param userId id del usuario a desabilitar.
+     * @return true si la cuenta fue desabilitada, false en caso contrario.
+     */
+    @Override
+    public boolean deleteAccount(String userId) {
+        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        try {
+            UserRepresentation user = keycloak.realm(realm).users().get(userId).toRepresentation();
+            user.setEnabled(false);
+            keycloak.realm(realm).users().get(userId).update(user);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
 }

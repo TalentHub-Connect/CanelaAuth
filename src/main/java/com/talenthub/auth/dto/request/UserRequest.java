@@ -13,8 +13,6 @@ public class UserRequest {
     private Integer id;
     private String nombres;
     private String correo;
-    private BigInteger telefono;
-    private BigInteger identificacion;
     private String password;
     private String username;
 }
