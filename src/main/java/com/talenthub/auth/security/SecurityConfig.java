@@ -28,7 +28,7 @@ public class SecurityConfig {
             throws Exception {
         http.csrf(AbstractHttpConfigurer::disable);
         http.authorizeHttpRequests( auth -> {
-            auth.requestMatchers(HttpMethod.POST,"/api/canela/auth/login").permitAll();
+            auth.requestMatchers(HttpMethod.POST,"/api/talentsoft/auth/login").permitAll();
             auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
             auth.anyRequest().authenticated();
         });

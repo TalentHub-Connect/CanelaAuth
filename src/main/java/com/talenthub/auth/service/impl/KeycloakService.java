@@ -12,6 +12,7 @@ import com.talenthub.auth.tool.ObjectToUrlEncodedConverter;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.Keycloak;
 
+import org.keycloak.admin.client.resource.RoleMappingResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
@@ -121,10 +122,36 @@ public class KeycloakService implements IKeycloakService {
         Keycloak keycloak = keycloakUtil.getKeycloakInstance();
         String userId = keycloak.realm(realm).users().search(username).get(0).getId();
         List<RoleRepresentation> roles = keycloak.realm(realm).users().get(userId).roles().realmLevel().listAll();
+
         for (RoleRepresentation role : roles) {
             return role.getName();
         }
         return null;
+    }
+
+    @Override
+    public void changeUserRoles(String username, List<String> newRoleNames) throws ErrorKeycloakServiceException {
+        try {
+            Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+
+            // Obtener el ID del usuario basado en el nombre de usuario
+            String userId = keycloak.realm(realm).users().search(username).get(0).getId();
+
+            // Obtener instancia de la administración de roles del usuario
+            UserResource userResource = keycloak.realm(realm).users().get(userId);
+            RoleMappingResource roleMappingResource = userResource.roles();
+            roleMappingResource.realmLevel().remove(roleMappingResource.realmLevel().listAll());
+
+            List<RoleRepresentation> newRoles = new ArrayList<>();
+            for (String roleName : newRoleNames) {
+                RoleRepresentation role = keycloak.realm(realm).roles().get(roleName).toRepresentation();
+                newRoles.add(role);
+            }
+            roleMappingResource.realmLevel().add(newRoles);
+
+        } catch (Exception e) {
+            throw new ErrorKeycloakServiceException(e.getMessage(), HttpStatus.NOT_FOUND.value());
+        }
     }
 
     /**
@@ -145,6 +172,7 @@ public class KeycloakService implements IKeycloakService {
             emailVerification(userRepresentation.getId());
             keycloak.realm(realm).users().get(userRepresentation.getId()).resetPassword(mapUserRep(user).getCredentials().get(0));
             String userId = keycloak.realm(realm).users().search(user.getUsername()).get(0).getId();
+
             RoleRepresentation Role = keycloak.realm(realm).roles().get(role).toRepresentation();
             keycloak.realm(realm).users().get(userId).roles().realmLevel().add(singletonList(Role));
             return ResponseEntity.status(HttpStatus.CREATED).body(user);

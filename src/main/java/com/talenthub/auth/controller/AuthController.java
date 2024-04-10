@@ -17,8 +17,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/canela/auth")
+@RequestMapping("/api/talentsoft/auth")
 @SecurityRequirement(name = "Keycloak")
 public class AuthController {
     private final IKeycloakService keycloakService;
@@ -42,18 +44,27 @@ public class AuthController {
         TokenResponse token = keycloakService.getAccessToken(request);
         return new ResponseEntity<>(token, HttpStatus.OK);
     }
-    @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con rol ADMIN")
-    @ApiResponse(responseCode = "201", description = "Admin creado")
-    @ApiResponse(responseCode = "400", description = "Error al crear el admin")
+
+    /**
+     * Este metodo permite crear un usuario con un rol desde frontend
+     * @param userRequest Datos del usuario
+     * @param role Rol del usuario
+     * @return Mensaje de confirmación ó mensaje de error
+     */
+    @Operation(summary = "Crear un usuario con un rol", description = "Crea un usuario con un rol")
+    @ApiResponse(responseCode = "201", description = "usuario creado")
+    @ApiResponse(responseCode = "400", description = "Error al crear el usuario")
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
     @PostMapping("/{role}")
-    public ResponseEntity<?> createAdmin(@RequestBody UserRequest userRequest, @PathVariable String role ){
+    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role){
         ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role);
         if (response.getStatusCode().is2xxSuccessful()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body("Admin creado");
+            return ResponseEntity.status(HttpStatus.CREATED).body("User with role "+ role + " created");
         } else {
-            return ResponseEntity.badRequest().body("Error creating admin");
+            return ResponseEntity.badRequest().body("Error creating an "+ role +" user");
         }
     }
+
     /**
      * Este metodo permite restaurar la contraseña de un usuario
      * @param username Nombre de usuario
@@ -70,6 +81,16 @@ public class AuthController {
         if (response.getStatusCode().is2xxSuccessful()) {
             return ResponseEntity.ok(new MessageResponse("Correo enviado"));
         } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PutMapping("/change-role/{username}")
+    public ResponseEntity<?> changeRole(@PathVariable String username, @RequestBody List<String> roles) {
+        try {
+            keycloakService.changeUserRoles(username,roles);
+            return ResponseEntity.ok(new MessageResponse("Role changed"));
+        } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
     }
