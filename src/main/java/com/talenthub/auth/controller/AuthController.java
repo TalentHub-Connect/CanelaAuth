@@ -52,6 +52,7 @@ public class AuthController {
     @Operation(summary = "Crear un usuario con un rol", description = "Crea un usuario con un rol")
     @ApiResponse(responseCode = "201", description = "usuario creado")
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario")
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
     @PostMapping("/{role}")
     public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role){
         ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role);
