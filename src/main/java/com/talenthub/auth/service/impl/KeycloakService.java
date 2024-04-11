@@ -163,6 +163,7 @@ public class KeycloakService implements IKeycloakService {
 
     @Override
     public ResponseEntity<?> createUserWithRole(@RequestBody UserRequest user, String role) {
+
         Keycloak keycloak = keycloakUtil.getKeycloakInstance();
         UserRepresentation userRep = mapUserRep(user);
         Response res = keycloak.realm(realm).users().create(userRep);
