@@ -134,7 +134,6 @@ public class KeycloakService implements IKeycloakService {
     @Override
     public void changeUserRoles(String username, List<String> newRoleNames) throws ErrorKeycloakServiceException {
         try {
-
             Keycloak keycloak = keycloakUtil.getKeycloakInstance();
 
             // Obtener el ID del usuario basado en el nombre de usuario
