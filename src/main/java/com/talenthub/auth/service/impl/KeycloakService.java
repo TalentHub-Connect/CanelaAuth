@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
 
@@ -124,11 +125,7 @@ public class KeycloakService implements IKeycloakService {
         Keycloak keycloak = keycloakUtil.getKeycloakInstance();
         String userId = keycloak.realm(realm).users().search(username).get(0).getId();
         List<RoleRepresentation> roles = keycloak.realm(realm).users().get(userId).roles().realmLevel().listAll();
-
-        for (RoleRepresentation role : roles) {
-            return role.getName();
-        }
-        return null;
+        return roles.stream().map(RoleRepresentation::getName).collect(Collectors.joining(", "));
     }
 
     @Override
