@@ -10,13 +10,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.ws.rs.QueryParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -51,17 +53,27 @@ public class AuthController {
      * @param role Rol del usuario
      * @return Mensaje de confirmación ó mensaje de error
      */
-    @Operation(summary = "Crear un usuario con un rol", description = "Crea un usuario con un rol")
-    @ApiResponse(responseCode = "201", description = "usuario creado")
+
+    @Operation(summary = "Crear un usuario con un rol", description = "Crea un usuario con un rol específico.")
+    @ApiResponse(responseCode = "201", description = "Usuario creado")
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario")
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ADMIN_CANELA')")
     @PostMapping("/{role}")
-    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role){
+    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role) {
+        if (role == null || role.isEmpty()) {
+            return ResponseEntity.badRequest().body("Role is required");
+        }
+        if (SecurityContextHolder.getContext().getAuthentication().getAuthorities().contains(new SimpleGrantedAuthority("ADMIN_CANELA"))) {
+            List<String> allowedRoles = Arrays.asList("ADMIN_CANELA", "MARKETING", "SOPORTE", "CUENTAS");
+            if (!allowedRoles.contains(role.toUpperCase())) {
+                return ResponseEntity.badRequest().body("ADMIN_CANELA can only create users with the following roles: " + String.join(", ", allowedRoles));
+            }
+        }
         ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role);
         if (response.getStatusCode().is2xxSuccessful()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body("User with role "+ role + " created");
+            return ResponseEntity.status(HttpStatus.CREATED).body("User with role " + role + " created");
         } else {
-            return ResponseEntity.badRequest().body("Error creating an "+ role +" user");
+            return ResponseEntity.badRequest().body("Error creating a user with role " + role);
         }
     }
 
@@ -86,6 +98,7 @@ public class AuthController {
     }
 
     @PutMapping("/change-role/{username}")
+    @PreAuthorize("hasAnyAuthority('ADMIN' , 'ADMIN_CANELA')")
     public ResponseEntity<?> changeRole(@PathVariable String username, @RequestBody List<String> roles) {
         try {
             keycloakService.changeUserRoles(username,roles);
