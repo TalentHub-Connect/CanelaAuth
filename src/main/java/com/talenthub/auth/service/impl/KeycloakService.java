@@ -32,10 +32,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
@@ -132,11 +129,7 @@ public class KeycloakService implements IKeycloakService {
     public void changeUserRoles(String username, List<String> newRoleNames) throws ErrorKeycloakServiceException {
         try {
             Keycloak keycloak = keycloakUtil.getKeycloakInstance();
-
-            // Obtener el ID del usuario basado en el nombre de usuario
             String userId = keycloak.realm(realm).users().search(username).get(0).getId();
-
-            // Obtener instancia de la administración de roles del usuario
             UserResource userResource = keycloak.realm(realm).users().get(userId);
             RoleMappingResource roleMappingResource = userResource.roles();
             roleMappingResource.realmLevel().remove(roleMappingResource.realmLevel().listAll());
@@ -162,10 +155,14 @@ public class KeycloakService implements IKeycloakService {
 
     @Override
     public ResponseEntity<?> createUserWithRole(@RequestBody UserRequest user, String role) {
-        username = user.getFirstName().trim() + "." + user.getLastName().trim()+"@talentsoft.com";
-        username = username.toLowerCase();
+        String firstName = user.getFirstName().trim().replaceAll("\\s+", "");
+        String lastName = user.getLastName().trim().replaceAll("\\s+", "");
+        String username = (firstName + "." + lastName + "@talentsoft.com").toLowerCase();
+
         Keycloak keycloak = keycloakUtil.getKeycloakInstance();
         UserRepresentation userRep = mapUserRep(user);
+        userRep.setUsername(username);
+
         Response res = keycloak.realm(realm).users().create(userRep);
 
         if (res.getStatusInfo().getFamily() == Response.Status.Family.SUCCESSFUL) {
@@ -173,15 +170,15 @@ public class KeycloakService implements IKeycloakService {
             emailVerification(userRepresentation.getId());
             keycloak.realm(realm).users().get(userRepresentation.getId()).resetPassword(mapUserRep(user).getCredentials().get(0));
             String userId = keycloak.realm(realm).users().search(username).get(0).getId();
-
-            RoleRepresentation Role = keycloak.realm(realm).roles().get(role).toRepresentation();
-            keycloak.realm(realm).users().get(userId).roles().realmLevel().add(singletonList(Role));
+            RoleRepresentation roleRep = keycloak.realm(realm).roles().get(role).toRepresentation();
+            keycloak.realm(realm).users().get(userId).roles().realmLevel().add(Collections.singletonList(roleRep));
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
         } else {
             String errorMessage = res.readEntity(String.class);
             return ResponseEntity.badRequest().body(errorMessage);
         }
     }
+
 
     @Override
     public void emailVerification(String userId) {
@@ -192,7 +189,6 @@ public class KeycloakService implements IKeycloakService {
     @Override
     public UserRepresentation mapUserRep(UserRequest user) {
         UserRepresentation userRep = new UserRepresentation();
-        userRep.setUsername(username);
         userRep.setFirstName(user.getFirstName());
         userRep.setLastName(user.getLastName());
         userRep.setEmail(user.getEmail());
