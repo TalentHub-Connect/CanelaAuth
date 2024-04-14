@@ -27,11 +27,12 @@ import java.util.List;
 @SecurityRequirement(name = "Keycloak")
 public class AuthController {
     private final IKeycloakService keycloakService;
+    private final CryptoUtil cryptoUtil;
+
     @Autowired
-    private CryptoUtil cryptoUtil;
-    @Autowired
-    public AuthController(IKeycloakService keycloakService) {
+    public AuthController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
         this.keycloakService = keycloakService;
+        this.cryptoUtil = cryptoUtil;
     }
 
     /**
@@ -53,15 +54,15 @@ public class AuthController {
     }
 
     /**
-     * Este metodo permite crear un usuario con un rol desde frontend
-     * @param userRequest Datos del usuario
-     * @param role Rol del usuario
-     * @return Mensaje de confirmación ó mensaje de error
+     * This method allows you to create a user with a specific role
+     * @param userRequest User data
+     * @param role The role to assign to the user
+     * @return Message of confirmation or error message
      */
 
-    @Operation(summary = "Crear un usuario con un rol", description = "Crea un usuario con un rol específico.")
-    @ApiResponse(responseCode = "201", description = "Usuario creado")
-    @ApiResponse(responseCode = "400", description = "Error al crear el usuario")
+    @Operation(description = "Create a user with a specific role")
+    @ApiResponse(responseCode = "201", description = "User created")
+    @ApiResponse(responseCode = "400", description = "Error creating the user")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'ADMIN_CANELA')")
     @PostMapping("/{role}")
     public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role) {
@@ -83,9 +84,9 @@ public class AuthController {
     }
 
     /**
-     * Este metodo permite restaurar la contraseña de un usuario
-     * @param username Nombre de usuario
-     * @return Mensaje de confirmación ó mensaje de error
+     * This method allows you reset the password of a user
+     * @param username The username to reset the password
+     * @return Message of confirmation or error message
      */
 
     @Operation(summary = "Restaurar contraseña", description = "Envia un correo para restaurar la contraseña")
@@ -102,6 +103,17 @@ public class AuthController {
         }
     }
 
+    /**
+     * Method to change the role of a user in the system
+     * @param username The user same to change the role
+     * @param roles The list of the roles to assign to the user
+     * @return Message of confirmation or error message
+     */
+
+    @Operation(summary = "Change the role of the user",
+            description = "The user must have the ADMIN role or ADMIN_CANELA to change the role of another user.")
+    @ApiResponse(responseCode = "200", description = "Role changed")
+    @ApiResponse(responseCode = "404", description = "Error changing the role")
     @PutMapping("/change-role/{username}")
     @PreAuthorize("hasAnyAuthority('ADMIN' , 'ADMIN_CANELA')")
     public ResponseEntity<?> changeRole(@PathVariable String username, @RequestBody List<String> roles) {
