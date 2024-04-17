@@ -78,9 +78,9 @@ public class AuthController {
                 .toList();
 
         // Definir los roles permitidos para ADMIN_CANELA
-        List<String> allowedRolesForAdminCanela = Arrays.asList("ADMIN_CANELA", "MARKETING", "SOPORTE", "CUENTAS");
+        List<String> allowedRolesForAdminCanela = Arrays.asList("ADMIN", "MARKETING", "SOPORTE", "CUENTAS");
         // Definir los roles permitidos para ADMIN
-        List<String> allowedRolesForAdmin = Arrays.asList("ADMIN", "RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
+        List<String> allowedRolesForAdmin = Arrays.asList("RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
 
         if (currentAuthorityRoles.contains("ADMIN_CANELA") && !allowedRolesForAdminCanela.contains(role.toUpperCase())) {
             return ResponseEntity.badRequest().body("ADMIN_CANELA can only create users with the following roles: " + String.join(", ", allowedRolesForAdminCanela));
