@@ -42,6 +42,26 @@ public class RoleController {
     }
 
     /**
+     * Obtiene los roles asignados a un usuario específico en Keycloak.
+     * @param username Nombre de usuario cuyos roles se quieren obtener.
+     * @return Lista de roles o mensaje de error en caso de fallo.
+     */
+
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ADMIN_CANELA')")
+    @GetMapping("/user/{username}/roles")
+    public ResponseEntity<?> getUserRoles(@PathVariable String username) {
+        try {
+            List<String> roles = keycloakRoleService.getUserRoles(username);
+            if (roles.isEmpty()) {
+                return ResponseEntity.ok(new MessageResponse("No roles found for user: " + username));
+            }
+            return ResponseEntity.ok(roles);
+        } catch (ErrorKeycloakServiceException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse("Failed to fetch user roles for: " + username + ", Error: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Asigna un rol a un usuario en Keycloak.
      * @param username Nombre de usuario al que se le asignará el rol.
      * @param roles Lista de roles a asignar.
@@ -58,6 +78,8 @@ public class RoleController {
             return ResponseEntity.notFound().build();
         }
     }
+
+
 
     /**
      * Elimina un rol en Keycloak.
