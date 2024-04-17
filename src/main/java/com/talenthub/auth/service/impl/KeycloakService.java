@@ -66,13 +66,17 @@ public class KeycloakService implements IKeycloakService {
 
     @Value("${keycloak.credentials.secret}")
     private  String clientSecret;
-    private final KeycloakSecurityUtil keycloakUtil;
 
-    private String username;
+    private final KeycloakSecurityUtil keycloakUtil;
 
     @Autowired
     public KeycloakService(KeycloakSecurityUtil keycloakUtil) {
         this.keycloakUtil = keycloakUtil;
+    }
+
+    @Override
+    public Keycloak getKeycloakInstance() {
+        return keycloakUtil.getKeycloakInstance();
     }
 
     /**
@@ -119,32 +123,13 @@ public class KeycloakService implements IKeycloakService {
     }
 
     public String getRole(String username) {
-        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        Keycloak keycloak = getKeycloakInstance();
         String userId = keycloak.realm(realm).users().search(username).get(0).getId();
         List<RoleRepresentation> roles = keycloak.realm(realm).users().get(userId).roles().realmLevel().listAll();
         return roles.stream().map(RoleRepresentation::getName).collect(Collectors.joining(", "));
     }
 
-    @Override
-    public void changeUserRoles(String username, List<String> newRoleNames) throws ErrorKeycloakServiceException {
-        try {
-            Keycloak keycloak = keycloakUtil.getKeycloakInstance();
-            String userId = keycloak.realm(realm).users().search(username).get(0).getId();
-            UserResource userResource = keycloak.realm(realm).users().get(userId);
-            RoleMappingResource roleMappingResource = userResource.roles();
-            roleMappingResource.realmLevel().remove(roleMappingResource.realmLevel().listAll());
 
-            List<RoleRepresentation> newRoles = new ArrayList<>();
-            for (String roleName : newRoleNames) {
-                RoleRepresentation role = keycloak.realm(realm).roles().get(roleName).toRepresentation();
-                newRoles.add(role);
-            }
-            roleMappingResource.realmLevel().add(newRoles);
-
-        } catch (Exception e) {
-            throw new ErrorKeycloakServiceException(e.getMessage(), HttpStatus.NOT_FOUND.value());
-        }
-    }
 
     /**
      * Método para crear un usuario con un rol específico en Keycloak.
@@ -159,7 +144,7 @@ public class KeycloakService implements IKeycloakService {
         String lastName = user.getLastName().trim().replaceAll("\\s+", "");
         String username = (firstName + "." + lastName + "@talentsoft.com").toLowerCase();
 
-        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        Keycloak keycloak = getKeycloakInstance();
         UserRepresentation userRep = mapUserRep(user);
         userRep.setUsername(username);
 
@@ -182,7 +167,7 @@ public class KeycloakService implements IKeycloakService {
 
     @Override
     public void emailVerification(String userId) {
-        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        Keycloak keycloak = getKeycloakInstance();
         keycloak.realm(realm).users().get(userId).executeActionsEmail(singletonList("VERIFY_EMAIL"));
     }
 
@@ -209,7 +194,7 @@ public class KeycloakService implements IKeycloakService {
 
     @Override
     public ResponseEntity<?> forgotPassword(String username){
-        UsersResource usersResource = keycloakUtil.getKeycloakInstance().realm(realm).users();
+        UsersResource usersResource = getKeycloakInstance().realm(realm).users();
 
         List<UserRepresentation> userRepresentations = usersResource.search(username);
         Optional<UserRepresentation> userOptional = userRepresentations.stream().findFirst();
@@ -230,9 +215,10 @@ public class KeycloakService implements IKeycloakService {
      * @param userId id del usuario a desabilitar.
      * @return true si la cuenta fue desabilitada, false en caso contrario.
      */
+
     @Override
     public boolean deleteAccount(String userId) {
-        Keycloak keycloak = keycloakUtil.getKeycloakInstance();
+        Keycloak keycloak = getKeycloakInstance();
         try {
             UserRepresentation user = keycloak.realm(realm).users().get(userId).toRepresentation();
             user.setEnabled(false);
@@ -242,6 +228,4 @@ public class KeycloakService implements IKeycloakService {
             return false;
         }
     }
-
-
 }

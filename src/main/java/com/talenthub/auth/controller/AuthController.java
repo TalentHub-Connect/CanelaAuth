@@ -21,18 +21,20 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/talentsoft/auth")
 @SecurityRequirement(name = "Keycloak")
 public class AuthController {
     private final IKeycloakService keycloakService;
+
     private final CryptoUtil cryptoUtil;
 
     @Autowired
     public AuthController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
         this.keycloakService = keycloakService;
-        this.cryptoUtil = cryptoUtil;
+        this.cryptoUtil  = cryptoUtil;
     }
 
     /**
@@ -69,11 +71,23 @@ public class AuthController {
         if (role == null || role.isEmpty()) {
             return ResponseEntity.badRequest().body("Role is required");
         }
-        if (SecurityContextHolder.getContext().getAuthentication().getAuthorities().contains(new SimpleGrantedAuthority("ADMIN_CANELA"))) {
-            List<String> allowedRoles = Arrays.asList("ADMIN_CANELA", "MARKETING", "SOPORTE", "CUENTAS");
-            if (!allowedRoles.contains(role.toUpperCase())) {
-                return ResponseEntity.badRequest().body("ADMIN_CANELA can only create users with the following roles: " + String.join(", ", allowedRoles));
-            }
+
+        // Obtener los roles de la autoridad actual
+        List<String> currentAuthorityRoles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .map(grantedAuthority -> ((SimpleGrantedAuthority) grantedAuthority).getAuthority())
+                .toList();
+
+        // Definir los roles permitidos para ADMIN_CANELA
+        List<String> allowedRolesForAdminCanela = Arrays.asList("ADMIN_CANELA", "MARKETING", "SOPORTE", "CUENTAS");
+        // Definir los roles permitidos para ADMIN
+        List<String> allowedRolesForAdmin = Arrays.asList("ADMIN", "RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
+
+        if (currentAuthorityRoles.contains("ADMIN_CANELA") && !allowedRolesForAdminCanela.contains(role.toUpperCase())) {
+            return ResponseEntity.badRequest().body("ADMIN_CANELA can only create users with the following roles: " + String.join(", ", allowedRolesForAdminCanela));
+        }
+
+        if (currentAuthorityRoles.contains("ADMIN") && !allowedRolesForAdmin.contains(role.toUpperCase())) {
+            return ResponseEntity.badRequest().body("ADMIN can only create users with the following roles: " + String.join(", ", allowedRolesForAdmin));
         }
         ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role);
         if (response.getStatusCode().is2xxSuccessful()) {
@@ -102,29 +116,6 @@ public class AuthController {
             return ResponseEntity.notFound().build();
         }
     }
-
-    /**
-     * Method to change the role of a user in the system
-     * @param username The user same to change the role
-     * @param roles The list of the roles to assign to the user
-     * @return Message of confirmation or error message
-     */
-
-    @Operation(summary = "Change the role of the user",
-            description = "The user must have the ADMIN role or ADMIN_CANELA to change the role of another user.")
-    @ApiResponse(responseCode = "200", description = "Role changed")
-    @ApiResponse(responseCode = "404", description = "Error changing the role")
-    @PutMapping("/change-role/{username}")
-    @PreAuthorize("hasAnyAuthority('ADMIN' , 'ADMIN_CANELA')")
-    public ResponseEntity<?> changeRole(@PathVariable String username, @RequestBody List<String> roles) {
-        try {
-            keycloakService.changeUserRoles(username,roles);
-            return ResponseEntity.ok(new MessageResponse("Role changed"));
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     @Operation(summary = "Desabilitar un usuario", description = "Desabilita un usuario")
     @ApiResponse(responseCode = "200", description = "Usuario desabilitado")
     @ApiResponse(responseCode = "404", description = "Error al desabilitar el usuario")
