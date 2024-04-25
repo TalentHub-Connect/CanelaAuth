@@ -15,24 +15,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/talentsoft/auth")
 @SecurityRequirement(name = "Keycloak")
-public class AuthController {
+public class TalentSoftController {
     private final IKeycloakService keycloakService;
 
     private final CryptoUtil cryptoUtil;
 
     @Autowired
-    public AuthController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
+    public TalentSoftController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
         this.keycloakService = keycloakService;
         this.cryptoUtil  = cryptoUtil;
     }
@@ -55,6 +55,17 @@ public class AuthController {
         return new ResponseEntity<>(token, HttpStatus.OK);
     }
 
+    @PutMapping("/users/{username}")
+    public ResponseEntity<?> updateUser(@PathVariable("username") String username, @RequestBody UserRequest userRequest) {
+        try {
+            if (keycloakService.updateUser(username, userRequest))
+                return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse("Usuario actualizado"));
+            else return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     /**
      * Este metodo permite crear un usuario con un rol desde frontend
      * @param userRequest Datos del usuario
@@ -74,7 +85,7 @@ public class AuthController {
 
         // Obtener los roles de la autoridad actual
         List<String> currentAuthorityRoles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .map(grantedAuthority -> ((SimpleGrantedAuthority) grantedAuthority).getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .toList();
 
         // Definir los roles permitidos para ADMIN_CANELA
@@ -118,6 +129,7 @@ public class AuthController {
             return ResponseEntity.notFound().build();
         }
     }
+
     @Operation(summary = "Desabilitar un usuario", description = "Desabilita un usuario")
     @ApiResponse(responseCode = "200", description = "Usuario desabilitado")
     @ApiResponse(responseCode = "404", description = "Error al desabilitar el usuario")

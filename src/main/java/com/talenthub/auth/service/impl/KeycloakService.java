@@ -164,6 +164,25 @@ public class KeycloakService implements IKeycloakService {
         }
     }
 
+    @Override
+    public boolean updateUser(String username, UserRequest user) {
+        Keycloak keycloak = getKeycloakInstance();
+        try {
+            UserRepresentation userRep = updateUserMap(user);
+            keycloak.realm(realm).users().get(username).update(userRep);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public UserRepresentation updateUserMap(UserRequest user){
+        UserRepresentation userRep = new UserRepresentation();
+        userRep.setFirstName(user.getFirstName());
+        userRep.setLastName(user.getLastName());
+        return userRep;
+    }
+
 
     @Override
     public void emailVerification(String userId) {
