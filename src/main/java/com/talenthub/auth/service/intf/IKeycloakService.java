@@ -2,6 +2,7 @@ package com.talenthub.auth.service.intf;
 
 
 import com.talenthub.auth.dto.request.AuthenticationRequest;
+import com.talenthub.auth.dto.request.UpdateRequest;
 import com.talenthub.auth.dto.request.UserRequest;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
@@ -16,8 +17,8 @@ public interface IKeycloakService {
     TokenResponse getAccessToken(AuthenticationRequest request) throws ErrorKeycloakServiceException;
     ResponseEntity<?> forgotPassword(String username);
     boolean deleteAccount(String userId);
-    ResponseEntity<?> createUserWithRole(UserRequest user, String role);
-    boolean updateUser(String userId, UserRequest user);
+    ResponseEntity<?> createUserWithRole(UserRequest user, String role, String enterprise);
+    boolean updateUser(String userId, UpdateRequest user, String enterprise);
     void emailVerification(String userId);
     UserRepresentation mapUserRep(UserRequest user);
 
