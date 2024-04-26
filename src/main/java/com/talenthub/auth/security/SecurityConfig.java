@@ -29,6 +29,7 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable);
         http.authorizeHttpRequests( auth -> {
             auth.requestMatchers("/api/talentsoft/auth/login").permitAll();
+            auth.requestMatchers("/api/talentsoft/auth/free-trial").permitAll();
             auth.requestMatchers("/api/talentsoft/auth/{username}/forgot-password").permitAll();
             auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
             auth.anyRequest().authenticated();

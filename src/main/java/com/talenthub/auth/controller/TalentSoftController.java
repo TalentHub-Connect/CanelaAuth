@@ -1,6 +1,7 @@
 package com.talenthub.auth.controller;
 
 import com.talenthub.auth.dto.request.AuthenticationRequest;
+import com.talenthub.auth.dto.request.UpdateRequest;
 import com.talenthub.auth.dto.request.UserRequest;
 import com.talenthub.auth.dto.response.MessageResponse;
 import com.talenthub.auth.dto.response.TokenResponse;
@@ -15,24 +16,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/talentsoft/auth")
 @SecurityRequirement(name = "Keycloak")
-public class AuthController {
+public class TalentSoftController {
     private final IKeycloakService keycloakService;
 
     private final CryptoUtil cryptoUtil;
 
     @Autowired
-    public AuthController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
+    public TalentSoftController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
         this.keycloakService = keycloakService;
         this.cryptoUtil  = cryptoUtil;
     }
@@ -56,31 +56,48 @@ public class AuthController {
     }
 
     /**
-     * This method allows you to create a user with a specific role
-     * @param userRequest User data
-     * @param role The role to assign to the user
-     * @return Message of confirmation or error message
+     * Este metodo permite actualizar los datos de un usuario
+     * @param username Nombre de usuario
+     * @param updateRequest Datos a actualizar
+     * @return Mensaje de confirmación ó mensaje de error
+     */
+    @Operation(summary = "Actualizar datos de un usuario", description = "Actualiza los datos de un usuario")
+    @ApiResponse(responseCode = "200", description = "Usuario actualizado")
+    @ApiResponse(responseCode = "404", description = "Error al actualizar el usuario")
+    @Parameter(name = "username", description = "Nombre de usuario", required = true)
+    @Parameter(name = "enterprise", description = "Empresa del usuario", required = true)
+    @PutMapping("/users/{username}")
+    public ResponseEntity<?> updateUser(@PathVariable("username") String username, @RequestBody UpdateRequest updateRequest, @RequestParam String enterprise) {
+        try {
+            if (keycloakService.updateUser(username, updateRequest))
+                return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse("Usuario actualizado"));
+            else return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Este metodo permite crear un usuario con un rol desde frontend
+     * @param userRequest Datos del usuario
+     * @param role Rol del usuario
+     * @return Mensaje de confirmación ó mensaje de error
      */
 
-    @Operation(description = "Create a user with a specific role")
-    @ApiResponse(responseCode = "201", description = "User created")
-    @ApiResponse(responseCode = "400", description = "Error creating the user")
+    @Operation(summary = "Crear un usuario con un rol", description = "Crea un usuario con un rol específico.")
+    @ApiResponse(responseCode = "201", description = "Usuario creado")
+    @ApiResponse(responseCode = "400", description = "Error al crear el usuario")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'ADMIN_CANELA')")
-    @PostMapping("/{role}")
-    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role) {
+    @PostMapping("{enterprise}/{role}")
+    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role, @PathVariable ("enterprise") String enterprise) {
         if (role == null || role.isEmpty()) {
             return ResponseEntity.badRequest().body("Role is required");
         }
-
-        // Obtener los roles de la autoridad actual
         List<String> currentAuthorityRoles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .map(grantedAuthority -> ((SimpleGrantedAuthority) grantedAuthority).getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .toList();
-
-        // Definir los roles permitidos para ADMIN_CANELA
-        List<String> allowedRolesForAdminCanela = Arrays.asList("ADMIN", "MARKETING", "SOPORTE", "CUENTAS");
-        // Definir los roles permitidos para ADMIN
-        List<String> allowedRolesForAdmin = Arrays.asList("RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
+        List<String> allowedRolesForAdminCanela = Arrays.asList("MARKETING", "SOPORTE", "CUENTAS");
+        List<String> allowedRolesForAdmin = Arrays.asList("ADMIN","RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
 
         if (currentAuthorityRoles.contains("ADMIN_CANELA") && !allowedRolesForAdminCanela.contains(role.toUpperCase())) {
             return ResponseEntity.badRequest().body("ADMIN_CANELA can only create users with the following roles: " + String.join(", ", allowedRolesForAdminCanela));
@@ -89,7 +106,8 @@ public class AuthController {
         if (currentAuthorityRoles.contains("ADMIN") && !allowedRolesForAdmin.contains(role.toUpperCase())) {
             return ResponseEntity.badRequest().body("ADMIN can only create users with the following roles: " + String.join(", ", allowedRolesForAdmin));
         }
-        ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role);
+
+        ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, role, enterprise);
         if (response.getStatusCode().is2xxSuccessful()) {
             return ResponseEntity.status(HttpStatus.CREATED).body("User with role " + role + " created");
         } else {
@@ -97,10 +115,26 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con el rol ADMIN.")
+    @ApiResponse(responseCode = "201", description = "Usuario admin creado")
+    @ApiResponse(responseCode = "400", description = "Error al crear el usuario admin")
+    @PostMapping("/free-trial")
+    public ResponseEntity<?> createFreeTrialUser(@RequestBody UserRequest userRequest ) {
+        String freeTrialRole = "FREE_TRIAL";
+        String enterprise = "talentsoft";
+
+        ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, freeTrialRole, enterprise);
+        if (response.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body("User with admin role created");
+        } else {
+            return ResponseEntity.badRequest().body("Error creating a user with admin role");
+        }
+    }
+
     /**
-     * This method allows you reset the password of a user
-     * @param username The username to reset the password
-     * @return Message of confirmation or error message
+     * Este metodo permite restaurar la contraseña de un usuario
+     * @param username Nombre de usuario
+     * @return Mensaje de confirmación ó mensaje de error
      */
 
     @Operation(summary = "Restaurar contraseña", description = "Envia un correo para restaurar la contraseña")
@@ -108,7 +142,7 @@ public class AuthController {
     @ApiResponse(responseCode = "404", description = "Error al enviar el correo")
     @Parameter(name = "username", description = "Nombre de usuario", required = true)
     @PostMapping("/{username}/forgot-password")
-    public ResponseEntity<?> forgotPassword(@PathVariable String username) {
+    public ResponseEntity<?> forgotPassword(@PathVariable("username") String username) {
         ResponseEntity<?> response = keycloakService.forgotPassword(username);
         if (response.getStatusCode().is2xxSuccessful()) {
             return ResponseEntity.ok(new MessageResponse("Correo enviado"));
@@ -116,6 +150,7 @@ public class AuthController {
             return ResponseEntity.notFound().build();
         }
     }
+
     @Operation(summary = "Desabilitar un usuario", description = "Desabilita un usuario")
     @ApiResponse(responseCode = "200", description = "Usuario desabilitado")
     @ApiResponse(responseCode = "404", description = "Error al desabilitar el usuario")

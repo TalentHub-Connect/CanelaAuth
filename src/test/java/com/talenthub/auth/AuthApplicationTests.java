@@ -80,7 +80,7 @@ void whenCreateUserWithValidData_thenReturnsCreated() throws Exception {
     ResponseEntity<MessageResponse> createdResponse = ResponseEntity
         .status(HttpStatus.CREATED)
         .body(new MessageResponse("User with role ADMIN created"));
-	doReturn(createdResponse).when(keycloakService).createUserWithRole(any(UserRequest.class), eq(role));
+	doReturn(createdResponse).when(keycloakService).createUserWithRole(any(UserRequest.class), eq(role), any());
 
     mockMvc.perform(post("/api/talentsoft/auth/" + role)
             .contentType(MediaType.APPLICATION_JSON)

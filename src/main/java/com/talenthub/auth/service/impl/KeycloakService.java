@@ -3,16 +3,17 @@ package com.talenthub.auth.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.talenthub.auth.dto.request.AuthenticationRequest;
+import com.talenthub.auth.dto.request.UpdateRequest;
 import com.talenthub.auth.dto.request.UserRequest;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
 import com.talenthub.auth.security.KeycloakSecurityUtil;
 import com.talenthub.auth.service.intf.IKeycloakService;
 import com.talenthub.auth.tool.ObjectToUrlEncodedConverter;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.Keycloak;
-
-import org.keycloak.admin.client.resource.RoleMappingResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
@@ -129,8 +130,6 @@ public class KeycloakService implements IKeycloakService {
         return roles.stream().map(RoleRepresentation::getName).collect(Collectors.joining(", "));
     }
 
-
-
     /**
      * Método para crear un usuario con un rol específico en Keycloak.
      * @param user Usuario a crear.
@@ -139,22 +138,22 @@ public class KeycloakService implements IKeycloakService {
      */
 
     @Override
-    public ResponseEntity<?> createUserWithRole(@RequestBody UserRequest user, String role) {
+    public ResponseEntity<?> createUserWithRole(@RequestBody UserRequest user, String role, String enterprise) {
         String firstName = user.getFirstName().trim().replaceAll("\\s+", "");
         String lastName = user.getLastName().trim().replaceAll("\\s+", "");
-        String username = (firstName + "." + lastName + "@talentsoft.com").toLowerCase();
+        String baseUsername = (firstName + "." + lastName + "@" + enterprise +".com").toLowerCase();
 
         Keycloak keycloak = getKeycloakInstance();
+        String uniqueUsername = generateUniqueUsername(baseUsername, keycloak);
         UserRepresentation userRep = mapUserRep(user);
-        userRep.setUsername(username);
-
+        userRep.setUsername(uniqueUsername);
         Response res = keycloak.realm(realm).users().create(userRep);
 
         if (res.getStatusInfo().getFamily() == Response.Status.Family.SUCCESSFUL) {
-            UserRepresentation userRepresentation = keycloak.realm(realm).users().search(username).get(0);
+            UserRepresentation userRepresentation = keycloak.realm(realm).users().search(uniqueUsername).get(0);
             emailVerification(userRepresentation.getId());
             keycloak.realm(realm).users().get(userRepresentation.getId()).resetPassword(mapUserRep(user).getCredentials().get(0));
-            String userId = keycloak.realm(realm).users().search(username).get(0).getId();
+            String userId = userRepresentation.getId();
             RoleRepresentation roleRep = keycloak.realm(realm).roles().get(role).toRepresentation();
             keycloak.realm(realm).users().get(userId).roles().realmLevel().add(Collections.singletonList(roleRep));
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
@@ -162,6 +161,51 @@ public class KeycloakService implements IKeycloakService {
             String errorMessage = res.readEntity(String.class);
             return ResponseEntity.badRequest().body(errorMessage);
         }
+    }
+
+    private String generateUniqueUsername(String baseUsername, Keycloak keycloak) {
+        int counter = 1;
+        String baseName = baseUsername.substring(0, baseUsername.indexOf("@"));
+        String domain = baseUsername.substring(baseUsername.indexOf("@"));
+
+        String candidateUsername = baseUsername;
+        while (!keycloak.realm(realm).users().search(candidateUsername).isEmpty()) {
+            counter++;
+            candidateUsername = baseName + counter + domain;
+        }
+        return candidateUsername;
+    }
+
+
+
+    @Override
+    public boolean updateUser(String username, UpdateRequest user) {
+        Keycloak keycloak = getKeycloakInstance();
+        List<UserRepresentation> users = keycloak.realm(realm).users().search(username);
+        if (users.isEmpty()) {
+            throw new RuntimeException("Usuario not found");
+        }
+        String userId = users.get(0).getId();
+        try {
+            UserRepresentation userRep = updateUserMap(user);
+            keycloak.realm(realm).users().get(userId).update(userRep);
+            return true;
+        } catch (NotFoundException e) {
+            throw new RuntimeException("Usuario no encontrado: " + username, e);
+        } catch (WebApplicationException e) {
+            Response response = e.getResponse();
+            throw new RuntimeException("fail de la API al update el usuario: HTTP Status " + response.getStatus(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while updating the user : ", e);
+        }
+    }
+
+
+    public UserRepresentation updateUserMap(UpdateRequest user){
+        UserRepresentation userRep = new UserRepresentation();
+        userRep.setFirstName(user.getFirstName());
+        userRep.setLastName(user.getLastName());
+        return userRep;
     }
 
 
