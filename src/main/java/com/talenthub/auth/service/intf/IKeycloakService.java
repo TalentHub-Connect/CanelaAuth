@@ -18,7 +18,7 @@ public interface IKeycloakService {
     ResponseEntity<?> forgotPassword(String username);
     boolean deleteAccount(String userId);
     ResponseEntity<?> createUserWithRole(UserRequest user, String role, String enterprise);
-    boolean updateUser(String userId, UpdateRequest user, String enterprise);
+    boolean updateUser(String userId, UpdateRequest user);
     void emailVerification(String userId);
     UserRepresentation mapUserRep(UserRequest user);
 

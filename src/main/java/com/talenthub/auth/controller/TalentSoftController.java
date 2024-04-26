@@ -69,7 +69,7 @@ public class TalentSoftController {
     @PutMapping("/users/{username}")
     public ResponseEntity<?> updateUser(@PathVariable("username") String username, @RequestBody UpdateRequest updateRequest, @RequestParam String enterprise) {
         try {
-            if (keycloakService.updateUser(username, updateRequest, enterprise))
+            if (keycloakService.updateUser(username, updateRequest))
                 return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse("Usuario actualizado"));
             else return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -89,15 +89,15 @@ public class TalentSoftController {
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario")
     @PreAuthorize("hasAnyAuthority('ADMIN', 'ADMIN_CANELA')")
     @PostMapping("{enterprise}/{role}")
-    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role, @PathVariable("enterprise") String enterprise) {
+    public ResponseEntity<?> CreateUser(@RequestBody UserRequest userRequest, @PathVariable String role, @PathVariable ("enterprise") String enterprise) {
         if (role == null || role.isEmpty()) {
             return ResponseEntity.badRequest().body("Role is required");
         }
         List<String> currentAuthorityRoles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
-        List<String> allowedRolesForAdminCanela = Arrays.asList("ADMIN", "MARKETING", "SOPORTE", "CUENTAS");
-        List<String> allowedRolesForAdmin = Arrays.asList("RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
+        List<String> allowedRolesForAdminCanela = Arrays.asList("MARKETING", "SOPORTE", "CUENTAS");
+        List<String> allowedRolesForAdmin = Arrays.asList("ADMIN","RECLUTAMIENTO", "DESPIDO", "SST", "NOMINA_ELECTRONICA", "BI");
 
         if (currentAuthorityRoles.contains("ADMIN_CANELA") && !allowedRolesForAdminCanela.contains(role.toUpperCase())) {
             return ResponseEntity.badRequest().body("ADMIN_CANELA can only create users with the following roles: " + String.join(", ", allowedRolesForAdminCanela));
@@ -115,6 +115,21 @@ public class TalentSoftController {
         }
     }
 
+    @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con el rol ADMIN.")
+    @ApiResponse(responseCode = "201", description = "Usuario admin creado")
+    @ApiResponse(responseCode = "400", description = "Error al crear el usuario admin")
+    @PostMapping("/free-trial")
+    public ResponseEntity<?> createFreeTrialUser(@RequestBody UserRequest userRequest ) {
+        String freeTrialRole = "FREE_TRIAL";
+        String enterprise = "talentsoft";
+
+        ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, freeTrialRole, enterprise);
+        if (response.getStatusCode().is2xxSuccessful()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body("User with admin role created");
+        } else {
+            return ResponseEntity.badRequest().body("Error creating a user with admin role");
+        }
+    }
 
     /**
      * Este metodo permite restaurar la contraseña de un usuario

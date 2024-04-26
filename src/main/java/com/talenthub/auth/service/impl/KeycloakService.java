@@ -141,16 +141,19 @@ public class KeycloakService implements IKeycloakService {
     public ResponseEntity<?> createUserWithRole(@RequestBody UserRequest user, String role, String enterprise) {
         String firstName = user.getFirstName().trim().replaceAll("\\s+", "");
         String lastName = user.getLastName().trim().replaceAll("\\s+", "");
-        String username = (firstName + "." + lastName + "@" + enterprise +".com").toLowerCase();
+        String baseUsername = (firstName + "." + lastName + "@" + enterprise +".com").toLowerCase();
+
         Keycloak keycloak = getKeycloakInstance();
+        String uniqueUsername = generateUniqueUsername(baseUsername, keycloak);
         UserRepresentation userRep = mapUserRep(user);
-        userRep.setUsername(username);
+        userRep.setUsername(uniqueUsername);
         Response res = keycloak.realm(realm).users().create(userRep);
+
         if (res.getStatusInfo().getFamily() == Response.Status.Family.SUCCESSFUL) {
-            UserRepresentation userRepresentation = keycloak.realm(realm).users().search(username).get(0);
+            UserRepresentation userRepresentation = keycloak.realm(realm).users().search(uniqueUsername).get(0);
             emailVerification(userRepresentation.getId());
             keycloak.realm(realm).users().get(userRepresentation.getId()).resetPassword(mapUserRep(user).getCredentials().get(0));
-            String userId = keycloak.realm(realm).users().search(username).get(0).getId();
+            String userId = userRepresentation.getId();
             RoleRepresentation roleRep = keycloak.realm(realm).roles().get(role).toRepresentation();
             keycloak.realm(realm).users().get(userId).roles().realmLevel().add(Collections.singletonList(roleRep));
             return ResponseEntity.status(HttpStatus.CREATED).body(user);
@@ -160,21 +163,31 @@ public class KeycloakService implements IKeycloakService {
         }
     }
 
+    private String generateUniqueUsername(String baseUsername, Keycloak keycloak) {
+        int counter = 1;
+        String baseName = baseUsername.substring(0, baseUsername.indexOf("@"));
+        String domain = baseUsername.substring(baseUsername.indexOf("@"));
+
+        String candidateUsername = baseUsername;
+        while (!keycloak.realm(realm).users().search(candidateUsername).isEmpty()) {
+            counter++;
+            candidateUsername = baseName + counter + domain;
+        }
+        return candidateUsername;
+    }
+
+
+
     @Override
-    public boolean updateUser(String username, UpdateRequest user, String enterprise) {
+    public boolean updateUser(String username, UpdateRequest user) {
         Keycloak keycloak = getKeycloakInstance();
         List<UserRepresentation> users = keycloak.realm(realm).users().search(username);
         if (users.isEmpty()) {
-            throw new RuntimeException("Usuario no encontrado");
+            throw new RuntimeException("Usuario not found");
         }
         String userId = users.get(0).getId();
         try {
             UserRepresentation userRep = updateUserMap(user);
-            String firstName = user.getFirstName().trim().replaceAll("\\s+", "");
-            String lastName = user.getLastName().trim().replaceAll("\\s+", "");
-            String updateUsername = (firstName + "." + lastName + "@" + enterprise +".com").toLowerCase();
-            userRep.setUsername(updateUsername);
-            System.out.println(userRep.getUsername());
             keycloak.realm(realm).users().get(userId).update(userRep);
             return true;
         } catch (NotFoundException e) {
