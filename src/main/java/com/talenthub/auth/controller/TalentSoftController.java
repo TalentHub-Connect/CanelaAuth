@@ -29,13 +29,12 @@ import java.util.List;
 @SecurityRequirement(name = "Keycloak")
 public class TalentSoftController {
     private final IKeycloakService keycloakService;
-
     private final CryptoUtil cryptoUtil;
 
     @Autowired
     public TalentSoftController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
         this.keycloakService = keycloakService;
-        this.cryptoUtil  = cryptoUtil;
+        this.cryptoUtil = cryptoUtil;
     }
 
     /**
@@ -50,8 +49,8 @@ public class TalentSoftController {
     @PostMapping("/login")
     public ResponseEntity<?> getAccessToken(@RequestBody AuthenticationRequest request) {
         try {
-            //String password = cryptoUtil.decrypt(request.getPassword());
-            //request.setPassword(password);
+            String password = cryptoUtil.decrypt(request.getPassword());
+            request.setPassword(password);
             TokenResponse token = keycloakService.getAccessToken(request);
             return new ResponseEntity<>(token, HttpStatus.OK);
         } catch (ErrorKeycloakServiceException e) {
