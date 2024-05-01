@@ -125,7 +125,7 @@ public class TalentSoftController {
 
         ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, freeTrialRole, enterprise);
         if (response.getStatusCode().is2xxSuccessful()) {
-            return ResponseEntity.status(HttpStatus.CREATED).body("User with admin role created");
+            return ResponseEntity.status(HttpStatus.CREATED).body(response.getBody());
         } else {
             return ResponseEntity.badRequest().body("Error creating a user with admin role");
         }

@@ -156,7 +156,7 @@ public class KeycloakService implements IKeycloakService {
             String userId = userRepresentation.getId();
             RoleRepresentation roleRep = keycloak.realm(realm).roles().get(role).toRepresentation();
             keycloak.realm(realm).users().get(userId).roles().realmLevel().add(Collections.singletonList(roleRep));
-            return ResponseEntity.status(HttpStatus.CREATED).body(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(uniqueUsername);
         } else {
             String errorMessage = res.readEntity(String.class);
             return ResponseEntity.badRequest().body(errorMessage);
