@@ -120,7 +120,7 @@ public class TalentSoftController {
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario admin")
     @PostMapping("/create/admin")
     public ResponseEntity<?> createAdminUser(@RequestBody UserRequest userRequest ) {
-        String freeTrialRole = "FREE_TRIAL";
+        String freeTrialRole = "ADMIN";
         String enterprise = "talentsoft";
 
         ResponseEntity<?> response = keycloakService.createUserWithRole(userRequest, freeTrialRole, enterprise);
