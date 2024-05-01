@@ -118,8 +118,8 @@ public class TalentSoftController {
     @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con el rol ADMIN.")
     @ApiResponse(responseCode = "201", description = "Usuario admin creado")
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario admin")
-    @PostMapping("/free-trial")
-    public ResponseEntity<?> createFreeTrialUser(@RequestBody UserRequest userRequest ) {
+    @PostMapping("/create/admin")
+    public ResponseEntity<?> createAdminUser(@RequestBody UserRequest userRequest ) {
         String freeTrialRole = "FREE_TRIAL";
         String enterprise = "talentsoft";
 
