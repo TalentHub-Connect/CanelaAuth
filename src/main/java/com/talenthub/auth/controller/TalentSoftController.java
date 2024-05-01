@@ -48,13 +48,20 @@ public class TalentSoftController {
     @ApiResponse(responseCode = "200", description = "Token obtenido")
     @ApiResponse(responseCode = "400", description = "Error al obtener el token de acceso")
     @PostMapping("/login")
-    public ResponseEntity<?> getAccessToken(@RequestBody AuthenticationRequest request) throws ErrorKeycloakServiceException {
-        String password = cryptoUtil.decrypt(request.getPassword());
-        System.out.println(password);
-        request.setPassword(password);
-        TokenResponse token = keycloakService.getAccessToken(request);
-        return new ResponseEntity<>(token, HttpStatus.OK);
+    public ResponseEntity<?> getAccessToken(@RequestBody AuthenticationRequest request) {
+        try {
+            //String password = cryptoUtil.decrypt(request.getPassword());
+            //request.setPassword(password);
+            TokenResponse token = keycloakService.getAccessToken(request);
+            return new ResponseEntity<>(token, HttpStatus.OK);
+        } catch (ErrorKeycloakServiceException e) {
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED.value()) {
+                return ResponseEntity.badRequest().body("Invalid credentials. Please check your username and password.");
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while processing your request.");
+        }
     }
+
 
     /**
      * Este metodo permite actualizar los datos de un usuario
