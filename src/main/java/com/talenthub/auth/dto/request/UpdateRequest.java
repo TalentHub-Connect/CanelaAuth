@@ -8,6 +8,7 @@ import lombok.*;
 @Setter
 @Builder
 public class UpdateRequest {
+    public String email;
     public String FirstName;
     public String LastName;
 }

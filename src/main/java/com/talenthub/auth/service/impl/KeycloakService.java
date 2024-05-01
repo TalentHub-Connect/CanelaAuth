@@ -203,6 +203,7 @@ public class KeycloakService implements IKeycloakService {
 
     public UserRepresentation updateUserMap(UpdateRequest user){
         UserRepresentation userRep = new UserRepresentation();
+        userRep.setEmail(user.getEmail());
         userRep.setFirstName(user.getFirstName());
         userRep.setLastName(user.getLastName());
         return userRep;

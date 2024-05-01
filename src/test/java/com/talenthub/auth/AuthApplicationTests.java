@@ -46,75 +46,74 @@ public class AuthApplicationTests {
     }
 
     @Test
-	void getAccessTokenSuccess() throws Exception {
-    AuthenticationRequest request = createAuthenticationRequestSuccess();
-    TokenResponse tokenResponse = TokenResponse.builder()
-                                                .access_token("access_token")
-                                                .role("ADMIN")
-                                                .build();
+    void getAccessTokenSuccess() throws Exception {
+        AuthenticationRequest request = createAuthenticationRequestSuccess();
+        TokenResponse tokenResponse = TokenResponse.builder()
+                .access_token("access_token")
+                .role("ADMIN")
+                .build();
 
-    when(keycloakService.getAccessToken(any(AuthenticationRequest.class))).thenReturn(tokenResponse);
+        when(keycloakService.getAccessToken(any(AuthenticationRequest.class))).thenReturn(tokenResponse);
 
-    MvcResult result = mockMvc.perform(post("/api/talentsoft/auth/login")
+        MvcResult result = mockMvc.perform(post("/api/talentsoft/auth/login")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapToJson(request)))
                 .andReturn();
 
-    assertEquals(200, result.getResponse().getStatus());
-    String content = result.getResponse().getContentAsString();
-    assertEquals("{\"access_token\":\"access_token\",\"role\":\"ADMIN\"}", content);
-}
+        assertEquals(200, result.getResponse().getStatus());
+        String content = result.getResponse().getContentAsString();
+        assertEquals("{\"access_token\":\"access_token\",\"role\":\"ADMIN\"}", content);
+    }
 
 
     private AuthenticationRequest createAuthenticationRequestSuccess() {
         return new AuthenticationRequest("sebasorjuela", "12345");
     }
 
-@Test
-@WithMockUser(authorities = "ADMIN")
-void whenCreateUserWithValidData_thenReturnsCreated() throws Exception {
-    UserRequest userRequest = new UserRequest("hola", "email@example.com", "12345");
-    String role = "ADMIN";
+    @Test
+    @WithMockUser(authorities = "ADMIN")
+    void whenCreateUserWithValidData_thenReturnsCreated() throws Exception {
+        UserRequest userRequest = new UserRequest("hola", "email@example.com", "12345");
+        String role = "ADMIN";
 
-    ResponseEntity<MessageResponse> createdResponse = ResponseEntity
-        .status(HttpStatus.CREATED)
-        .body(new MessageResponse("User with role ADMIN created"));
-	doReturn(createdResponse).when(keycloakService).createUserWithRole(any(UserRequest.class), eq(role), any());
+        ResponseEntity<MessageResponse> createdResponse = ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(new MessageResponse("User with role ADMIN created"));
+        doReturn(createdResponse).when(keycloakService).createUserWithRole(any(UserRequest.class), eq(role), any());
 
-    mockMvc.perform(post("/api/talentsoft/auth/" + role)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(new ObjectMapper().writeValueAsString(userRequest)))
-        .andExpect(status().isCreated())
-        .andExpect(content().string("User with role ADMIN created"));
-}
-
-
-@Test
-@WithMockUser(authorities = "ADMIN")
-void whenForgotPasswordForExistingUser_thenReturnsOk() throws Exception {
-    String username = "ticaso";
-    ResponseEntity<MessageResponse> responseEntity = new ResponseEntity<>(new MessageResponse("Correo enviado"), HttpStatus.OK);
-
-    doReturn(responseEntity).when(keycloakService).forgotPassword(username);
-
-    mockMvc.perform(post("/api/talentsoft/auth/" + username + "/forgot-password"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.message").value("Correo enviado"));
-}
+        mockMvc.perform(post("/api/talentsoft/auth/" + role)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(new ObjectMapper().writeValueAsString(userRequest)))
+                .andExpect(status().isCreated())
+                .andExpect(content().string("User with role ADMIN created"));
+    }
 
 
+    @Test
+    @WithMockUser(authorities = "ADMIN")
+    void whenForgotPasswordForExistingUser_thenReturnsOk() throws Exception {
+        String username = "ticaso";
+        ResponseEntity<MessageResponse> responseEntity = new ResponseEntity<>(new MessageResponse("Correo enviado"), HttpStatus.OK);
 
-@Test
-@WithMockUser(authorities = "ADMIN")
-void whenDeleteUser_thenReturnsOk() throws Exception {
-    String id = "b54b672c-8c02-4b56-b59a-7b695d0a8f94";
-    when(keycloakService.deleteAccount(id)).thenReturn(true);
+        doReturn(responseEntity).when(keycloakService).forgotPassword(username);
 
-    mockMvc.perform(delete("/api/talentsoft/auth/users/" + id))
-        .andExpect(status().isOk())
-        .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.message").value("Usuario desabilitado"));
-}
+        mockMvc.perform(post("/api/talentsoft/auth/" + username + "/forgot-password"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Correo enviado"));
+    }
+
+
+    @Test
+    @WithMockUser(authorities = "ADMIN")
+    void whenDeleteUser_thenReturnsOk() throws Exception {
+        String id = "b54b672c-8c02-4b56-b59a-7b695d0a8f94";
+        when(keycloakService.deleteAccount(id)).thenReturn(true);
+
+        mockMvc.perform(delete("/api/talentsoft/auth/users/" + id))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("Usuario desabilitado"));
+    }
 
 }
