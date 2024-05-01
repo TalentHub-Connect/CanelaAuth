@@ -176,6 +176,39 @@ public class KeycloakService implements IKeycloakService {
         return candidateUsername;
     }
 
+    /**
+     * Método para recuperar todos los usuarios que tienen un rol específico.
+     * @param role Rol específico de los usuarios a buscar.
+     * @return List<UserRepresentation> Lista de representaciones de usuarios con el rol especificado.
+     */
+
+    @Override
+    public List<UserRepresentation> getUsersByRole(String role) throws ErrorKeycloakServiceException {
+        Keycloak keycloak = getKeycloakInstance();
+        List<UserRepresentation> usersWithRole = new ArrayList<>();
+
+        try {
+            List<UserRepresentation> allUsers = keycloak.realm(realm).users().list();
+
+            for (UserRepresentation user : allUsers) {
+                List<RoleRepresentation> assignedRoles = keycloak.realm(realm).users().get(user.getId()).roles().realmLevel().listAll();
+
+                for (RoleRepresentation userRole : assignedRoles) {
+                    if (userRole.getName().equalsIgnoreCase(role)) {
+                        usersWithRole.add(user);
+                        break;  // Once the role is matched, no need to check further roles for the same user
+                    }
+                }
+            }
+            return usersWithRole;
+        } catch (Exception e) {
+            throw new ErrorKeycloakServiceException("Error while fetching users with role: " + role, HttpStatus.NOT_FOUND.value());
+        }
+    }
+
+
+
+
 
 
     @Override

@@ -10,6 +10,7 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
 
 
 public interface IKeycloakService {
@@ -21,5 +22,6 @@ public interface IKeycloakService {
     boolean updateUser(String userId, UpdateRequest user);
     void emailVerification(String userId);
     UserRepresentation mapUserRep(UserRequest user);
+    List<UserRepresentation> getUsersByRole(String role) throws ErrorKeycloakServiceException;
 
 }

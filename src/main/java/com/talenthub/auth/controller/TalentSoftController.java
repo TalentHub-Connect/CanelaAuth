@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -67,7 +68,7 @@ public class TalentSoftController {
     @Parameter(name = "username", description = "Nombre de usuario", required = true)
     @Parameter(name = "enterprise", description = "Empresa del usuario", required = true)
     @PutMapping("/users/{username}")
-    public ResponseEntity<?> updateUser(@PathVariable("username") String username, @RequestBody UpdateRequest updateRequest, @RequestParam String enterprise) {
+    public ResponseEntity<?> updateUser(@PathVariable("username") String username, @RequestBody UpdateRequest updateRequest) {
         try {
             if (keycloakService.updateUser(username, updateRequest))
                 return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse("Usuario actualizado"));
@@ -76,6 +77,31 @@ public class TalentSoftController {
             return ResponseEntity.internalServerError().build();
         }
     }
+
+    @Operation(summary = "Obtener usuarios por rol", description = "Recupera todos los usuarios que tienen un rol específico.")
+    @ApiResponse(responseCode = "200", description = "Usuarios recuperados con éxito")
+    @ApiResponse(responseCode = "404", description = "Rol no encontrado")
+    @ApiResponse(responseCode = "400", description = "Solicitud incorrecta")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'ADMIN_CANELA')")
+    @GetMapping("/users-by-role/{role}")
+    public ResponseEntity<?> getUsersByRole(@PathVariable("role") String role) {
+        try {
+            if (role == null || role.isEmpty()) {
+                return ResponseEntity.badRequest().body("Role parameter is required and cannot be empty.");
+            }
+
+            List<UserRepresentation> users = keycloakService.getUsersByRole(role);
+
+            if (users.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No users found for the role: " + role);
+            }
+
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while fetching users: " + e.getMessage());
+        }
+    }
+
 
     /**
      * Este metodo permite crear un usuario con un rol desde frontend
