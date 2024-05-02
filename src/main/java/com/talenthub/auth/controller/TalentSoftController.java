@@ -8,7 +8,6 @@ import com.talenthub.auth.dto.response.SimpleUserResponse;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
 import com.talenthub.auth.service.intf.IKeycloakService;
-import com.talenthub.auth.tool.CryptoUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
