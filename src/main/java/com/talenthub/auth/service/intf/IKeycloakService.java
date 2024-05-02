@@ -4,6 +4,7 @@ package com.talenthub.auth.service.intf;
 import com.talenthub.auth.dto.request.AuthenticationRequest;
 import com.talenthub.auth.dto.request.UpdateRequest;
 import com.talenthub.auth.dto.request.UserRequest;
+import com.talenthub.auth.dto.response.SimpleUserResponse;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
 import org.keycloak.admin.client.Keycloak;
@@ -22,6 +23,6 @@ public interface IKeycloakService {
     boolean updateUser(String userId, UpdateRequest user);
     void emailVerification(String userId);
     UserRepresentation mapUserRep(UserRequest user);
-    List<UserRepresentation> getUsersByRole(String role) throws ErrorKeycloakServiceException;
+    List<SimpleUserResponse> getUsersByRole(String role) throws ErrorKeycloakServiceException;
 
 }

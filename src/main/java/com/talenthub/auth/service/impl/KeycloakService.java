@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.talenthub.auth.dto.request.AuthenticationRequest;
 import com.talenthub.auth.dto.request.UpdateRequest;
 import com.talenthub.auth.dto.request.UserRequest;
+import com.talenthub.auth.dto.response.SimpleUserResponse;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
 import com.talenthub.auth.security.KeycloakSecurityUtil;
@@ -118,7 +119,10 @@ public class KeycloakService implements IKeycloakService {
                     .access_token((String) responseMap.get("access_token"))
                     .role(role)
                     .build();
-        }catch (HttpClientErrorException e){
+        }catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                throw new ErrorKeycloakServiceException("Invalid credentials", HttpStatus.BAD_REQUEST.value());
+            }
             throw new ErrorKeycloakServiceException(e.getMessage(), e.getStatusCode().value());
         }
     }
@@ -183,9 +187,9 @@ public class KeycloakService implements IKeycloakService {
      */
 
     @Override
-    public List<UserRepresentation> getUsersByRole(String role) throws ErrorKeycloakServiceException {
+    public List<SimpleUserResponse> getUsersByRole(String role) throws ErrorKeycloakServiceException {
         Keycloak keycloak = getKeycloakInstance();
-        List<UserRepresentation> usersWithRole = new ArrayList<>();
+        List<SimpleUserResponse> usersWithRole = new ArrayList<>();
 
         try {
             List<UserRepresentation> allUsers = keycloak.realm(realm).users().list();
@@ -195,8 +199,14 @@ public class KeycloakService implements IKeycloakService {
 
                 for (RoleRepresentation userRole : assignedRoles) {
                     if (userRole.getName().equalsIgnoreCase(role)) {
-                        usersWithRole.add(user);
-                        break;  // Once the role is matched, no need to check further roles for the same user
+                        usersWithRole.add(SimpleUserResponse.builder()
+                                .id(user.getId())
+                                .firstName(user.getFirstName())
+                                .lastName(user.getLastName())
+                                .email(user.getEmail())
+                                .username(user.getUsername())
+                                .build());
+                        break;
                     }
                 }
             }

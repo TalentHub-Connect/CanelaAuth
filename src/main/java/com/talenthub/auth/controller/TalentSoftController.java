@@ -4,6 +4,7 @@ import com.talenthub.auth.dto.request.AuthenticationRequest;
 import com.talenthub.auth.dto.request.UpdateRequest;
 import com.talenthub.auth.dto.request.UserRequest;
 import com.talenthub.auth.dto.response.MessageResponse;
+import com.talenthub.auth.dto.response.SimpleUserResponse;
 import com.talenthub.auth.dto.response.TokenResponse;
 import com.talenthub.auth.exception.ErrorKeycloakServiceException;
 import com.talenthub.auth.service.intf.IKeycloakService;
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,12 +29,10 @@ import java.util.List;
 @SecurityRequirement(name = "Keycloak")
 public class TalentSoftController {
     private final IKeycloakService keycloakService;
-    private final CryptoUtil cryptoUtil;
 
     @Autowired
-    public TalentSoftController(IKeycloakService keycloakService, CryptoUtil cryptoUtil) {
+    public TalentSoftController(IKeycloakService keycloakService) {
         this.keycloakService = keycloakService;
-        this.cryptoUtil = cryptoUtil;
     }
 
     /**
@@ -49,12 +47,10 @@ public class TalentSoftController {
     @PostMapping("/login")
     public ResponseEntity<?> getAccessToken(@RequestBody AuthenticationRequest request) {
         try {
-            String password = cryptoUtil.decrypt(request.getPassword());
-            request.setPassword(password);
             TokenResponse token = keycloakService.getAccessToken(request);
             return new ResponseEntity<>(token, HttpStatus.OK);
         } catch (ErrorKeycloakServiceException e) {
-            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED.value()) {
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST.value()) {
                 return ResponseEntity.badRequest().body("Invalid credentials. Please check your username and password.");
             }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while processing your request.");
@@ -95,13 +91,10 @@ public class TalentSoftController {
             if (role == null || role.isEmpty()) {
                 return ResponseEntity.badRequest().body("Role parameter is required and cannot be empty.");
             }
-
-            List<UserRepresentation> users = keycloakService.getUsersByRole(role);
-
+            List<SimpleUserResponse> users = keycloakService.getUsersByRole(role);
             if (users.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No users found for the role: " + role);
             }
-
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred while fetching users: " + e.getMessage());
