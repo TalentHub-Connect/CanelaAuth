@@ -24,5 +24,5 @@ public interface IKeycloakService {
     void emailVerification(String userId);
     UserRepresentation mapUserRep(UserRequest user);
     List<SimpleUserResponse> getUsersByRole(String role) throws ErrorKeycloakServiceException;
-
+    String getUserIdByUsername(String username) throws ErrorKeycloakServiceException;
 }
