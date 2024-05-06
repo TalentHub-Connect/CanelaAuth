@@ -20,8 +20,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/talentsoft/auth")
@@ -56,6 +55,30 @@ public class TalentSoftController {
         }
     }
 
+    /**
+     * Este metodo permite obtener el ID de un usuario
+     * @param username Nombre de usuario
+     * @return ID del usuario
+     */
+
+    @Operation(summary = "Obtener el ID del usuario", description = "Obtiene el ID del usuario basado en el username proporcionado.")
+    @ApiResponse(responseCode = "200", description = "ID del usuario obtenido")
+    @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
+    @ApiResponse(responseCode = "400", description = "Error en la solicitud")
+    @GetMapping("/users/id/{username}")
+    public ResponseEntity<?> getUserId(@PathVariable("username") String username) {
+        try {
+            String userId = keycloakService.getUserIdByUsername(username);
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.singletonMap("error", "User not found"));
+            }
+            Map<String, String> response = new HashMap<>();
+            response.put("userId", userId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Collections.singletonMap("error", "An error occurred while fetching user ID: " + e.getMessage()));
+        }
+    }
 
     /**
      * Este metodo permite actualizar los datos de un usuario
@@ -63,6 +86,7 @@ public class TalentSoftController {
      * @param updateRequest Datos a actualizar
      * @return Mensaje de confirmación ó mensaje de error
      */
+
     @Operation(summary = "Actualizar datos de un usuario", description = "Actualiza los datos de un usuario")
     @ApiResponse(responseCode = "200", description = "Usuario actualizado")
     @ApiResponse(responseCode = "404", description = "Error al actualizar el usuario")
