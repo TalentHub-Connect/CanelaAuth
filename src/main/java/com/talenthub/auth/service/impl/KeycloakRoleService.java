@@ -78,18 +78,6 @@ public class KeycloakRoleService implements IKeycloakRoleService {
     }
 
     @Override
-    public void deleteUserRoles(String username, List<String> roleNames) throws ErrorKeycloakServiceException {
-        try {
-            UserResource userResource = getUserResource(username);
-            RoleMappingResource roleMappingResource = userResource.roles();
-            removeAllRoles(roleMappingResource);
-            removeRoles(username, roleNames);
-        } catch (Exception e) {
-            throw new ErrorKeycloakServiceException(e.getMessage(), HttpStatus.NOT_FOUND.value());
-        }
-    }
-
-    @Override
     public List<String> getUserRoles(String username) throws ErrorKeycloakServiceException {
         try {
             UserResource userResource = getUserResource(username);
