@@ -230,10 +230,22 @@ public class KeycloakService implements IKeycloakService {
         }
     }
 
-
-
-
-
+    @Override
+    public List<SimpleUserResponse> getAllUsers() {
+        Keycloak keycloak = getKeycloakInstance();
+        List<SimpleUserResponse> users = new ArrayList<>();
+        List<UserRepresentation> allUsers = keycloak.realm(realm).users().list();
+        for (UserRepresentation user : allUsers) {
+            users.add(SimpleUserResponse.builder()
+                    .id(user.getId())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .username(user.getUsername())
+                    .build());
+        }
+        return users;
+    }
 
     @Override
     public boolean updateUser(String username, UpdateRequest user) {

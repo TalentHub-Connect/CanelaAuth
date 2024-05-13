@@ -124,6 +124,12 @@ public class TalentSoftController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<List<SimpleUserResponse>> getAllUsers() {
+        return ResponseEntity.ok(keycloakService.getAllUsers());
+    }
+
+
 
     /**
      * Este metodo permite crear un usuario con un rol desde frontend
