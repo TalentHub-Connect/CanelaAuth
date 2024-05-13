@@ -126,9 +126,13 @@ public class TalentSoftController {
 
     @GetMapping
     public ResponseEntity<List<SimpleUserResponse>> getAllUsers() {
-        return ResponseEntity.ok(keycloakService.getAllUsers());
+        try {
+            List<SimpleUserResponse> users = keycloakService.getAllUsers();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
+        }
     }
-
 
 
     /**
@@ -209,7 +213,6 @@ public class TalentSoftController {
     @ApiResponse(responseCode = "200", description = "Usuario desabilitado")
     @ApiResponse(responseCode = "404", description = "Error al desabilitar el usuario")
     @Parameter(name = "id", description = "Identificador del usuario", required = true)
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
     @DeleteMapping(value = "/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable("id") String id) {
         try {
