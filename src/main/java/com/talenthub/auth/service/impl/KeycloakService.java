@@ -118,6 +118,7 @@ public class KeycloakService implements IKeycloakService {
             return TokenResponse.builder()
                     .access_token((String) responseMap.get("access_token"))
                     .role(role)
+                    .email(getEmail(request.getUsername()))
                     .build();
         }catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
@@ -132,6 +133,12 @@ public class KeycloakService implements IKeycloakService {
         String userId = keycloak.realm(realm).users().search(username).get(0).getId();
         List<RoleRepresentation> roles = keycloak.realm(realm).users().get(userId).roles().realmLevel().listAll();
         return roles.stream().map(RoleRepresentation::getName).collect(Collectors.joining(", "));
+    }
+
+    public String getEmail(String username){
+        Keycloak keycloak = getKeycloakInstance();
+        String userId = keycloak.realm(realm).users().search(username).get(0).getId();
+        return keycloak.realm(realm).users().get(userId).toRepresentation().getEmail();
     }
 
     /**
