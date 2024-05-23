@@ -134,6 +134,8 @@ public class KeycloakService implements IKeycloakService {
         return roles.stream().map(RoleRepresentation::getName).collect(Collectors.joining(", "));
     }
 
+
+
     /**
      * Método para crear un usuario con un rol específico en Keycloak.
      * @param user Usuario a crear.
@@ -195,6 +197,19 @@ public class KeycloakService implements IKeycloakService {
         } catch (Exception e) {
             throw new ErrorKeycloakServiceException(username, HttpStatus.NOT_FOUND.value());
         }
+    }
+
+    @Override
+    public List<SimpleUserResponse> getAllUsers() {
+        return getKeycloakInstance().realm(realm).users().list().stream()
+                .map(user -> SimpleUserResponse.builder()
+                        .id(user.getId())
+                        .firstName(user.getFirstName())
+                        .lastName(user.getLastName())
+                        .email(user.getEmail())
+                        .username(user.getUsername())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     /**
