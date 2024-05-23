@@ -179,6 +179,7 @@ public class TalentSoftController {
         }
     }
 
+
     @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con el rol ADMIN.")
     @ApiResponse(responseCode = "201", description = "Usuario admin creado")
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario admin")
