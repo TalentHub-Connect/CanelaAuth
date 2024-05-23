@@ -118,6 +118,7 @@ public class KeycloakService implements IKeycloakService {
             return TokenResponse.builder()
                     .access_token((String) responseMap.get("access_token"))
                     .role(role)
+                    .email(getEmail(request.getUsername()))
                     .build();
         }catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
@@ -132,6 +133,12 @@ public class KeycloakService implements IKeycloakService {
         String userId = keycloak.realm(realm).users().search(username).get(0).getId();
         List<RoleRepresentation> roles = keycloak.realm(realm).users().get(userId).roles().realmLevel().listAll();
         return roles.stream().map(RoleRepresentation::getName).collect(Collectors.joining(", "));
+    }
+
+    public String getEmail(String username){
+        Keycloak keycloak = getKeycloakInstance();
+        String userId = keycloak.realm(realm).users().search(username).get(0).getId();
+        return keycloak.realm(realm).users().get(userId).toRepresentation().getEmail();
     }
 
     /**
@@ -181,6 +188,23 @@ public class KeycloakService implements IKeycloakService {
     }
 
     /**
+     * Método para recuperar el id de un usuario a partir de su nombre de usuario.
+     * @param username Nombre de usuario del usuario a buscar.
+     * @return String Id del usuario.
+     */
+
+    @Override
+    public String getUserIdByUsername(String username) throws ErrorKeycloakServiceException {
+        Keycloak keycloak = getKeycloakInstance();
+        try {
+            List<UserRepresentation> users = keycloak.realm(realm).users().search(username);
+            return users.get(0).getId();
+        } catch (Exception e) {
+            throw new ErrorKeycloakServiceException(username, HttpStatus.NOT_FOUND.value());
+        }
+    }
+
+    /**
      * Método para recuperar todos los usuarios que tienen un rol específico.
      * @param role Rol específico de los usuarios a buscar.
      * @return List<UserRepresentation> Lista de representaciones de usuarios con el rol especificado.
@@ -190,13 +214,10 @@ public class KeycloakService implements IKeycloakService {
     public List<SimpleUserResponse> getUsersByRole(String role) throws ErrorKeycloakServiceException {
         Keycloak keycloak = getKeycloakInstance();
         List<SimpleUserResponse> usersWithRole = new ArrayList<>();
-
         try {
             List<UserRepresentation> allUsers = keycloak.realm(realm).users().list();
-
             for (UserRepresentation user : allUsers) {
                 List<RoleRepresentation> assignedRoles = keycloak.realm(realm).users().get(user.getId()).roles().realmLevel().listAll();
-
                 for (RoleRepresentation userRole : assignedRoles) {
                     if (userRole.getName().equalsIgnoreCase(role)) {
                         usersWithRole.add(SimpleUserResponse.builder()
@@ -216,10 +237,22 @@ public class KeycloakService implements IKeycloakService {
         }
     }
 
-
-
-
-
+    @Override
+    public List<SimpleUserResponse> getAllUsers() {
+        Keycloak keycloak = getKeycloakInstance();
+        List<SimpleUserResponse> users = new ArrayList<>();
+        List<UserRepresentation> allUsers = keycloak.realm(realm).users().list();
+        for (UserRepresentation user : allUsers) {
+            users.add(SimpleUserResponse.builder()
+                    .id(user.getId())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .email(user.getEmail())
+                    .username(user.getUsername())
+                    .build());
+        }
+        return users;
+    }
 
     @Override
     public boolean updateUser(String username, UpdateRequest user) {
