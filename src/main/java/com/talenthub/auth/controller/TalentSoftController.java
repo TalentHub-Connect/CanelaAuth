@@ -173,6 +173,20 @@ public class TalentSoftController {
         }
     }
 
+    @Operation(summary = "Obtener todos los usuarios", description = "Recupera todos los usuarios.")
+    @ApiResponse(responseCode = "200", description = "Usuarios recuperados con éxito")
+    @ApiResponse(responseCode = "500", description = "Error al recuperar los usuarios")
+
+    @GetMapping
+    public ResponseEntity<List<SimpleUserResponse>> getAllUsers() {
+        try {
+            List<SimpleUserResponse> users = keycloakService.getAllUsers();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
+        }
+    }
+
     @Operation(summary = "Crear un usuario con rol ADMIN", description = "Crea un usuario con el rol ADMIN.")
     @ApiResponse(responseCode = "201", description = "Usuario admin creado")
     @ApiResponse(responseCode = "400", description = "Error al crear el usuario admin")

@@ -203,7 +203,6 @@ public class KeycloakService implements IKeycloakService {
             throw new ErrorKeycloakServiceException(username, HttpStatus.NOT_FOUND.value());
         }
     }
-
     /**
      * Método para recuperar todos los usuarios que tienen un rol específico.
      * @param role Rol específico de los usuarios a buscar.
